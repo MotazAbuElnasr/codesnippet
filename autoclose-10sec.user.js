@@ -16,5 +16,5 @@
     // …but if the browser blocks window.close() on an opener-less tab,
     // navigate away to an empty page to achieve the same effect.
     setTimeout(() => { location.replace('about:blank'); }, 100);
-  }, 10000);
+  }, 15000);
 })();

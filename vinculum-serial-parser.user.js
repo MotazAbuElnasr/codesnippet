@@ -4,7 +4,7 @@
 // @version      1.1.1
 // @description  Auto-parse 2D barcodes (GS1/Apple, Samsung, Huawei/Honor Data Matrix, raw IMEI) into line-separated serials/IMEIs in the "Enter SKU Serial No." modal. Appends across scans, silently rejects duplicates with toast, blocks Chrome shortcut hijack from scanner LF.
 // @author       Moataz
-// @match        https://tradelinguat.vineretail.com/eRetailWeb/*
+// @match        https://tradeling.vineretail.com/eRetailWeb/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=vineretail.com
 // @grant        none
 // ==/UserScript==

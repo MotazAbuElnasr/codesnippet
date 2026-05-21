@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vinculum Serial Box - 2D Barcode Auto-Parser
 // @namespace    http://tampermonkey.net/
-// @version      1.1.2
+// @version      1.1.3
 // @description  Auto-parse 2D barcodes (GS1/Apple, Samsung, Huawei/Honor Data Matrix, raw IMEI) into line-separated serials/IMEIs in the "Enter SKU Serial No." modal. Appends across scans, silently rejects duplicates with toast, blocks Chrome shortcut hijack from scanner LF.
 // @author       Moataz
 // @match        https://tradeling.vineretail.com/eRetailWeb/*
@@ -124,7 +124,6 @@
 
   const PARSE_DEBOUNCE_MS = 400;
   const SCAN_CHECK_INTERVAL_MS = 500;
-  const SCANNER_BURST_GAP_MS = 30; // keystrokes closer than this = scanner
 
   const hookedTextareas = new WeakSet();
 
@@ -249,7 +248,7 @@
       padding: 10px 14px; border-radius: 4px;
       font: 13px -apple-system, "Segoe UI", Arial, sans-serif;
       box-shadow: 0 6px 24px rgba(0,0,0,0.25);
-      max-width: 360px; cursor: pointer;
+      max-width: 360px; pointer-events: none;
       transition: opacity .25s, transform .25s;
       opacity: 0; transform: translateY(-8px);
     `;
@@ -271,7 +270,6 @@
       toast.style.transform = 'translateY(-8px)';
       setTimeout(() => toast.remove(), 250);
     };
-    toast.addEventListener('click', dismiss);
 
     doc.body.appendChild(toast);
     requestAnimationFrame(() => {
@@ -286,44 +284,34 @@
   //  SHORTCUT GUARD — kills Ctrl+J etc. when modal is open
   // ════════════════════════════════════════════════════════════════
 
-  const PROTECTED_KEYS = /^(j|o|s|p|f|d)$/i;
+  // Only browser-hijack keys are blocked — never text-editing keys (A/C/V/X/Z all pass through).
+  const PROTECTED_KEYS = /^(j|o|s|p)$/i;
 
   function installShortcutGuard(doc, textarea) {
     if (doc._serialShortcutGuard) return;
     doc._serialShortcutGuard = true;
 
-    let lastKeyAt = 0;
-
     const guard = (e) => {
       if (!doc.body.contains(textarea)) return;
       if (doc.activeElement !== textarea) return;
 
-      const now = performance.now();
-      const delta = now - lastKeyAt;
-      lastKeyAt = now;
-
       const isCtrl = e.ctrlKey || e.metaKey;
       if (!isCtrl) return;
+      if (!PROTECTED_KEYS.test(e.key)) return;
 
-      const inBurst = delta < SCANNER_BURST_GAP_MS;
-      const isProtected = PROTECTED_KEYS.test(e.key);
+      e.preventDefault();
+      e.stopPropagation();
 
-      if (inBurst || isProtected) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Ctrl+J = scanner LF; convert to a literal newline in the textarea
-        if (e.key && e.key.toLowerCase() === 'j') {
-          const start = textarea.selectionStart, end = textarea.selectionEnd;
-          textarea.value = textarea.value.slice(0, start) + '\n' + textarea.value.slice(end);
-          textarea.selectionStart = textarea.selectionEnd = start + 1;
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-        }
+      // Ctrl+J = scanner LF; convert to a literal newline in the textarea
+      if (e.key && e.key.toLowerCase() === 'j') {
+        const start = textarea.selectionStart, end = textarea.selectionEnd;
+        textarea.value = textarea.value.slice(0, start) + '\n' + textarea.value.slice(end);
+        textarea.selectionStart = textarea.selectionEnd = start + 1;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
       }
     };
 
     doc.defaultView.addEventListener('keydown', guard, true);
-    doc.addEventListener('keydown', guard, true);
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -338,7 +326,7 @@
       display:inline-block;padding:2px 8px;margin:4px 0;font-size:11px;
       font-weight:bold;color:#fff;background:#3c8dbc;border-radius:3px;transition:background .3s;
     `;
-    badge.textContent = '🔍 2D Parser Active (v1.1.2)';
+    badge.textContent = '🔍 2D Parser Active (v1.1.3)';
     textarea.parentNode.insertBefore(badge, textarea);
     textarea._parserBadge = badge;
   }
@@ -350,7 +338,7 @@
     badge.textContent = `✅ +${info.count} ${info.count === 1 ? 'serial' : 'serials'} (${info.format})`;
     setTimeout(() => {
       badge.style.background = '#3c8dbc';
-      badge.textContent = '🔍 2D Parser Active (v1.1.2)';
+      badge.textContent = '🔍 2D Parser Active (v1.1.3)';
     }, 3000);
   }
 
@@ -369,5 +357,5 @@
   }
 
   setInterval(scanForModals, SCAN_CHECK_INTERVAL_MS);
-  console.log('[Serial Parser v1.1.2] Loaded — monitoring for serial modals.');
+  console.log('[Serial Parser v1.1.3] Loaded — monitoring for serial modals.');
 })();

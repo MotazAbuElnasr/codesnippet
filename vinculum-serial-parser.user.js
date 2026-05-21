@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Vinculum Serial Box - 2D Barcode Auto-Parser
 // @namespace    http://tampermonkey.net/
-// @version      1.1.1
+// @version      1.1.2
 // @description  Auto-parse 2D barcodes (GS1/Apple, Samsung, Huawei/Honor Data Matrix, raw IMEI) into line-separated serials/IMEIs in the "Enter SKU Serial No." modal. Appends across scans, silently rejects duplicates with toast, blocks Chrome shortcut hijack from scanner LF.
 // @author       Moataz
 // @match        https://tradeling.vineretail.com/eRetailWeb/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=vineretail.com
+// @noframes
 // @grant        none
 // ==/UserScript==
 
@@ -154,19 +155,16 @@
 
       let lastSeen = '';
       const valueObserver = setInterval(() => {
+        // Self-cleanup when the modal closes — replaces the body-wide MutationObserver
+        if (!doc.body.contains(textarea)) {
+          clearInterval(valueObserver);
+          return;
+        }
         if (textarea.value !== lastSeen && textarea.value.trim() !== '') {
           lastSeen = textarea.value;
           scheduleProcess(PARSE_DEBOUNCE_MS);
         }
       }, 300);
-
-      const cleanupObserver = new MutationObserver(() => {
-        if (!doc.body.contains(textarea)) {
-          clearInterval(valueObserver);
-          cleanupObserver.disconnect();
-        }
-      });
-      cleanupObserver.observe(doc.body, { childList: true, subtree: true });
     } catch (e) { /* cross-origin iframe */ }
   }
 
@@ -333,13 +331,14 @@
   // ════════════════════════════════════════════════════════════════
 
   function addParserBadge(textarea, doc) {
+    if (doc.getElementById('serialParserBadge')) return; // already present — no duplicate
     const badge = doc.createElement('div');
     badge.id = 'serialParserBadge';
     badge.style.cssText = `
       display:inline-block;padding:2px 8px;margin:4px 0;font-size:11px;
       font-weight:bold;color:#fff;background:#3c8dbc;border-radius:3px;transition:background .3s;
     `;
-    badge.textContent = '🔍 2D Parser Active (v1.1.1)';
+    badge.textContent = '🔍 2D Parser Active (v1.1.2)';
     textarea.parentNode.insertBefore(badge, textarea);
     textarea._parserBadge = badge;
   }
@@ -351,7 +350,7 @@
     badge.textContent = `✅ +${info.count} ${info.count === 1 ? 'serial' : 'serials'} (${info.format})`;
     setTimeout(() => {
       badge.style.background = '#3c8dbc';
-      badge.textContent = '🔍 2D Parser Active (v1.1.1)';
+      badge.textContent = '🔍 2D Parser Active (v1.1.2)';
     }, 3000);
   }
 
@@ -370,5 +369,5 @@
   }
 
   setInterval(scanForModals, SCAN_CHECK_INTERVAL_MS);
-  console.log('[Serial Parser v1.1.1] Loaded — monitoring for serial modals.');
+  console.log('[Serial Parser v1.1.2] Loaded — monitoring for serial modals.');
 })();

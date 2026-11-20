@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Monitor Tab and Print Tradeling AWB
 // @namespace    http://tampermonkey.net/
-// @version      2025-02-20
+// @version      2026-11-20
 // @description  Monitor Manage Picking tab and print AWB dynamically
 // @author       You
 // @match        https://tradeling.vineretail.com/eRetailWeb/selCompanyLocationBS.action
@@ -145,7 +145,12 @@
           return;
         }
         const links = data.listOfMap.map(
-          (i) => `https://api.tradeling.com/api/shipping/v1/fulfillment-operations/download-awb?orderNumber=${i.ExtOrderNo}&shipmentNumber=${i.TrackingNo}&stageName=E2E`,
+          (i) =>
+            `https://api.tradeling.com/api/shipping/v1/fulfillment-operations/download-awb?${new URLSearchParams({
+              orderNumber: i.ExtOrderNo,
+              shipmentNumber: i.TrackingNo,
+              stageName: 'E2E',
+            })}`,
         );
 
         links.forEach((link) => {
